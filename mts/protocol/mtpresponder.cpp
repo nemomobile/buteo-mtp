@@ -2990,6 +2990,26 @@ void MTPResponder::resume()
     m_transporter->resume();
 }
 
+bool MTPResponder::activateTransport()
+{
+    if(m_transporter)
+        return m_transporter->activate();
+    else {
+        MTP_LOG_WARNING("Attempting to activate a non-existing transport layer");
+        return false;
+    }
+}
+
+bool MTPResponder::deactivateTransport()
+{
+    if(m_transporter)
+        return m_transporter->deactivate();
+    else {
+        MTP_LOG_WARNING("Attempting to deactivate a non-existing transport layer");
+        return false;
+    }
+}
+
 #if 0
 // This was added as a workaround for the QMetaType bug in QT (NB #169065)
 // However, the workaround for it is now also in sync-fw. So this unregistartion

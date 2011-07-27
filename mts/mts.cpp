@@ -50,18 +50,20 @@ Mts::Mts()
 {
 }
 
+void Mts::initialize()
+{
+    m_MTPResponder = MTPResponder::instance();
+    return m_MTPResponder->initTransport(USB);
+}
+
 bool Mts::activate()
 {
-    bool ok;
-    m_MTPResponder = MTPResponder::instance();
-    ok = m_MTPResponder->initTransport(USB);
-    return ok;
+    return m_MTPResponder->activateTransport();
 }
 
 bool Mts::deactivate()
 {
-    return true;
-    //TODO
+    return m_MTPResponder->deactivateTrasport();
 }
 
 Mts::~Mts()

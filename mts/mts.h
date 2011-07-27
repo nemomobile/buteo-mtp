@@ -47,6 +47,7 @@ Q_OBJECT
 public:
 
     static Mts* getInstance();
+    bool initialize();
     bool activate();
     bool deactivate();
     void toggleDebugLogs();

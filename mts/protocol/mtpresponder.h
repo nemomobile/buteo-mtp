@@ -98,6 +98,12 @@ class MTPResponder : public QObject
         /// Resumes the suspended MTP session
         void resume();
 
+    // Activate the MTP transport layer
+	bool activateTransport();
+
+	// Deactivate the MTP transport layer
+	bool deactivateTransport();
+
     Q_SIGNALS:
         /// This signal is emitted by the mtpresponder to indicate that the responder is an OK state. 
 	void deviceStatusOK();

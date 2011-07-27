@@ -53,7 +53,7 @@ int main(int argc, char** argv)
     signal(SIGUSR1, &sigUsr1Handler);
     QObject::connect(&app,SIGNAL(aboutToQuit()),Mts::getInstance(),SLOT(destroyInstance()));
 
-    bool ok = Mts::getInstance()->activate();
+    bool ok = Mts::getInstance()->initialize();
     if( ok )
     {
         QEventLoop eLoop;

@@ -52,7 +52,7 @@ int main(int argc, char** argv)
 
     QObject::connect(&app,SIGNAL(aboutToQuit()),Mts::getInstance(),SLOT(destroyInstance()));
 
-    bool ok = Mts::getInstance()->activate();
+    bool ok = Mts::getInstance()->initialize();
     if( ok )
     {
         app.exec();
