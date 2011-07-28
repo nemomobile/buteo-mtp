@@ -325,6 +325,8 @@ void MTPTransporterUSB::closeDevices()
     m_bulkWrite.exitThread();
     m_intrWrite.exitThread();
 
+    m_intrWrite.reset();
+
     // FIXME: this probably won't exit properly?
     // -- It doesn't, fixit
     if(m_outFd != -1) {
@@ -350,10 +352,20 @@ void MTPTransporterUSB::startRead()
 
 void MTPTransporterUSB::stopRead()
 {
-    emit cleanup();
+    m_bulkRead.exitThread();
+    m_bulkWrite.exitThread();
+    m_intrWrite.exitThread();
 
-    m_bulkRead.m_lock.unlock();
-    m_bulkWrite.m_lock.unlock();
+    m_intrWrite.reset();
+
+    m_bulkRead.wait();
+    m_bulkWrite.wait();
+    m_intrWrite.wait();
+
+    ioctl(m_inFd, FUNCTIONFS_FIFO_FLUSH);
+    ioctl(m_outFd, FUNCTIONFS_FIFO_FLUSH);
+
+    emit cleanup();
 }
 
 void MTPTransporterUSB::handleHighPriorityData()
