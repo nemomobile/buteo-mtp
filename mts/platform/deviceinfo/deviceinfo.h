@@ -332,7 +332,7 @@ protected:
     };
 
 private:
-    static QString m_devinceInfoXmlPath; ///< The xml file that stores default values for device properties.
+    static QString m_deviceInfoXmlPath; ///< The xml file that stores default values for device properties.
     QVector<quint16> m_mtpOperationsSupported; ///< supported MTP operations.
     QVector<quint16> m_mtpEventsSupported; ///< supported MTP events.
     QVector<quint16> m_mtpDevicePropertiesSupported; ///< supported MTP device properties.

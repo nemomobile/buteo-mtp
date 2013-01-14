@@ -202,7 +202,7 @@ quint16 DeviceInfo::m_devPropsSupportedTable[] = {
     MTP_DEV_PROPERTY_Device_Friendly_Name
 };
 
-QString DeviceInfo::m_devinceInfoXmlPath = "/home/user/.mtpdeviceinfo.xml";
+QString DeviceInfo::m_deviceInfoXmlPath = "/home/nemo/.mtpdeviceinfo.xml";
 
 //Constructor, first store default values for device properties. Next,
 //fetch the same from an xml file. If xml parsing fails, the hardcoded
@@ -242,11 +242,11 @@ DeviceInfo::DeviceInfo( QObject *parent ) :
 
     // Kludge : till we know how and where to securely install a file
     // that can be modifed by an apllication.
-    QFile fileDst(m_devinceInfoXmlPath);
+    QFile fileDst(m_deviceInfoXmlPath);
     QFile fileSrc("/usr/share/mtp/deviceinfo.xml");
-    if( "/home/user/.mtpdeviceinfo.xml" == m_devinceInfoXmlPath && !fileDst.exists() )
+    if( "/home/nemo/.mtpdeviceinfo.xml" == m_deviceInfoXmlPath && !fileDst.exists() )
     {
-        fileSrc.copy(m_devinceInfoXmlPath);
+        fileSrc.copy(m_deviceInfoXmlPath);
     }
     fileDst.open(QIODevice::ReadOnly | QIODevice::Text);
     QXmlSimpleReader xmlReader;
@@ -456,7 +456,7 @@ void DeviceInfo::modifyDeviceInfoXml( QString devPropName, QString value )
 {
     QDomDocument document;
     QDomElement element;
-    QFile file(m_devinceInfoXmlPath);
+    QFile file(m_deviceInfoXmlPath);
     if( file.open( QIODevice::ReadOnly) )
     {
         document.setContent(&file);
