@@ -78,7 +78,7 @@ public:
 public slots:
     /// Slot to handle battery level change signal.
     /// \param the new battery level.
-    void batteryLevelChanged( const quint8& batteryLevel );
+    void batteryLevelChanged( const quint8& batteryLevel1 );
 
 private:
     /// Gets device version and serial no from sysinfod.

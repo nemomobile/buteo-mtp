@@ -42,6 +42,7 @@ ContextSubscriber::ContextSubscriber(QObject* parent) : QObject(parent)
     bool ok;
     m_propBatteryLevel = new ContextProperty("Battery.ChargePercentage", this);
     connect(m_propBatteryLevel, SIGNAL(valueChanged()), this, SLOT(onBatteryLevelChanged()));
+    m_propBatteryLevel->subscribe();
     m_batteryLevel = static_cast<quint8>( m_propBatteryLevel->value().toString().toUShort(&ok) );
     if( !ok )
     {

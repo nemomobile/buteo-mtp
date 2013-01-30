@@ -73,7 +73,7 @@ DeviceInfoProvider::DeviceInfoProvider()
 }
 
 /**********************************************
- * DeviceInfoProvider::~DeviceInfoProvider 
+ * DeviceInfoProvider::~DeviceInfoProvider
  *********************************************/
 DeviceInfoProvider::~DeviceInfoProvider()
 {
@@ -152,13 +152,14 @@ QString DeviceInfoProvider::getBTFriendlyName()
  *********************************************/
 quint8 DeviceInfoProvider::batteryLevel( bool /*current*/ ) const
 {
+    MTP_LOG_INFO("Battery level: " << m_batteryLevel);
     return m_contextSubscriber->batteryLevel();
 }
 
 /**********************************************
  * const QString& DeviceInfoProvider::deviceFriendlyName
  *********************************************/
-#if 0 
+#if 0
 const QString& DeviceInfoProvider::deviceFriendlyName( bool /*current*/ )
 {
     QString name = getBTFriendlyName();
@@ -175,6 +176,6 @@ const QString& DeviceInfoProvider::deviceFriendlyName( bool /*current*/ )
  *********************************************/
 void DeviceInfoProvider::batteryLevelChanged( const quint8& /*batteryLevel*/ )
 {
+    MTP_LOG_INFO("Battery level changed: " << batteryLevel1);
     //TODO Send an event
 }
-
