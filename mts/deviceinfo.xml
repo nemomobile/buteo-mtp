@@ -102,8 +102,11 @@
                                 <DevPropCode>0x501F</DevPropCode>
                                 <DevPropValue>Do Not Copy</DevPropValue>
                         </DevProp>
+                        <DevProp><!--Battery Level-->
+                                <DevPropCode>0x5001</DevPropCode>
+                        </DevProp>
                         <DevProp><!--Device Type-->
-                                <DevPropCode>0XD407</DevPropCode>
+                                <DevPropCode>0xD407</DevPropCode>
                                 <DevPropValue>0x00000003</DevPropValue>
                         </DevProp>
                         <DevProp><!-- Device Icon -->
