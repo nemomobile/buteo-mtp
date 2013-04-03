@@ -89,3 +89,8 @@ void MtpServer::connectivityStateChanged( Sync::ConnectivityType /*aType*/, bool
 {
     MTP_LOG_INFO(__PRETTY_FUNCTION__);
 }
+
+bool MtpServer::cleanUp()
+{
+    return true;
+}

@@ -3,10 +3,11 @@
 ######################################################################
 
 CONFIG += qtestlib warn_off debug_and_release mobility
-CONFIG += qtsparql
+CONFIG += qtsparql link_pkgconfig
+PKGCONFIG += buteosyncfw
+
 MOBILITY = systeminfo
-LIBS += -lcontextsubscriber
-LIBS += -lsynccommon -ldl
+LIBS += -lcontextsubscriber -ldl
 TEMPLATE = app
 TARGET = storage-test
 QT += dbus xml

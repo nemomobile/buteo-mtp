@@ -6,12 +6,12 @@ TEMPLATE = lib
 TARGET = mtp-server
 DEPENDPATH += .
 INCLUDEPATH += . \
-/usr/include/sync \
 ../mts/ \
 ../mts/common
 
 
-CONFIG += plugin debug_and_release
+CONFIG += link_pkgconfig plugin debug_and_release
+PKGCONFIG += buteosyncfw
 QT -= gui
 LIBS += -L../mts/ -lmeegomtp
 
@@ -23,8 +23,8 @@ SOURCES += mtpserver.cpp
 QMAKE_CLEAN += $(TARGET) $(TARGET0) $(TARGET1) $(TARGET2)  
 
 #install 
-target.path = /usr/lib/sync/
-server.path = /etc/sync/profiles/server
+target.path = /usr/lib
+server.path = /etc/buteo/profiles/server
 server.files = mtp.xml
 
 INSTALLS += target \

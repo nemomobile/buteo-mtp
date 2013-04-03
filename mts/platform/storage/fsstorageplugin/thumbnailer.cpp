@@ -33,7 +33,7 @@
 #include <QCryptographicHash>
 #include <QDir>
 #include <QFile>
-#include <libsynccommon/SyncDBusConnection.h>
+#include <SyncDBusConnection.h>
 #include "thumbnailer.h"
 #include "trace.h"
 

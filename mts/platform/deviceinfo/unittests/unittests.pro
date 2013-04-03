@@ -4,11 +4,13 @@
 
 QT -= gui
 QT += dbus xml
-CONFIG += qtestlib warn_off debug_and_release mobility
+CONFIG += qtestlib warn_off debug_and_release mobility link_pkgconfig
+PKGCONFIG += buteosyncfw
+
 MOBILITY = systeminfo
 TEMPLATE = app
 TARGET = deviceinfo-test
-LIBS += -lcontextsubscriber -lsynccommon 
+LIBS += -lcontextsubscriber
 DEFINES += UT_ON
 #QMAKE_CXXFLAGS += -ftest-coverage -fprofile-arcs
 #QMAKE_LFLAGS += -fprofile-arcs -ftest-coverage

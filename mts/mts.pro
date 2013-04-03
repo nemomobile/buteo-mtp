@@ -6,11 +6,11 @@ QT += xml dbus
 QT -= gui
 
 CONFIG += link_pkgconfig debug mobility
+PKGCONFIG += buteosyncfw
 MOBILITY = systeminfo
 #QMAKE_CXXFLAGS += -O0 -Werror
 LIBS += -lcontextsubscriber
 #to be removed later when QtDBus makes it calls thread safe 
-LIBS += -lsynccommon
 
 TEMPLATE = lib
 TARGET = meegomtp

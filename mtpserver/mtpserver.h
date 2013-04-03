@@ -32,7 +32,7 @@
 #ifndef MTPSERVER_H
 #define MTPSERVER_H
 
-#include <libsyncpluginmgr/ServerPlugin.h>
+#include <ServerPlugin.h>
 
 using namespace Buteo;
 
@@ -69,6 +69,9 @@ public:
 
     /// \resume suspended MTP session
     void resume();
+
+    /// \cleanUp clean up a MTP session
+    virtual bool cleanUp();
 
 public slots:
      void connectivityStateChanged( Sync::ConnectivityType aType, bool aState );

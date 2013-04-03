@@ -40,7 +40,7 @@
 #include <QtSparql/QSparqlError>
 #include <QtSparql/QSparqlQuery>
 #include <QtSparql/QSparqlResult>
-#include <libsynccommon/SyncDBusConnection.h>
+#include <SyncDBusConnection.h>
 // Local headers
 #include "storagetracker.h"
 #include "trace.h"

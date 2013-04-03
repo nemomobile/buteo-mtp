@@ -39,7 +39,7 @@
 #include <QSystemInfo>
 #include <QSystemDeviceInfo>
 
-#include <libsynccommon/SyncDBusConnection.h>
+#include <SyncDBusConnection.h>
 
 using namespace meegomtp1dot0;
 QTM_USE_NAMESPACE

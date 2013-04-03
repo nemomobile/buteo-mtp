@@ -32,7 +32,7 @@
 #ifndef PRN_TRACE_H
 #define PRN_TRACE_H
 // Use logging macros available in sync-fw
-#include <libsynccommon/LogMacros.h>
+#include "LogMacros.h"
 #include "mts.h"
 
 #define MTP_LOG_LEVEL_CRITICAL      1
