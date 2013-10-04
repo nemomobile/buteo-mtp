@@ -408,6 +408,7 @@ void InterruptWriterThread::run()
         quint8 *dataptr = pair.first;
         int dataLen = pair.second;
 
+        MTP_LOG_INFO("InterruptWriterThread writing event size" << dataLen);
         while(dataLen && !m_shouldExit) {
             int bytesWritten = write(m_fd, dataptr, dataLen);
             if(bytesWritten == -1)

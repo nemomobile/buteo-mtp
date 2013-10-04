@@ -190,6 +190,7 @@ bool MTPTransporterUSB::sendData(const quint8* data, quint32 dataLen, bool isLas
     // remain responsive to events while the data is being written.
     // That's done by calling processEvents while waiting.
 
+    MTP_LOG_INFO("sendData size" << dataLen);
     m_bulkWrite.setData(data, dataLen);
     m_bulkWrite.start();
 
@@ -199,6 +200,8 @@ bool MTPTransporterUSB::sendData(const quint8* data, quint32 dataLen, bool isLas
         QCoreApplication::processEvents(QEventLoop::WaitForMoreEvents);
     }
     bool r = m_bulkWrite.getResult();
+    if (!r)
+        MTP_LOG_WARNING("sendData failed");
 
     m_bulkWrite.wait();
     m_writer_busy = false;
@@ -207,6 +210,7 @@ bool MTPTransporterUSB::sendData(const quint8* data, quint32 dataLen, bool isLas
 
 bool MTPTransporterUSB::sendEvent(const quint8* data, quint32 dataLen, bool isLastPacket)
 {
+    MTP_LOG_INFO("sendEvent size" << dataLen);
     m_intrWrite.addData(data, dataLen);
 
     return true;
