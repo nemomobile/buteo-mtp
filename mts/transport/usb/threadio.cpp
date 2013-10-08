@@ -380,6 +380,7 @@ void InterruptWriterThread::addData(const quint8 *buffer, quint32 dataLen)
     // This is here in case the interrupt writing thread cannot keep up
     // with the events. It removes the oldest events.
     while(m_buffers.count() >= MAX_EVENTS_STORED) {
+        MTP_LOG_INFO("Discarding unsent event");
         QPair<quint8*,int> pair = m_buffers.takeFirst();
         delete pair.first;
     }

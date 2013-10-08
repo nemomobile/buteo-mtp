@@ -7,6 +7,8 @@ TARGET = fsstorage
 
 CONFIG += plugin debug
 #QMAKE_CXXFLAGS += -O0 -Werror
+QMAKE_CXXFLAGS_DEBUG -= -O2
+QMAKE_CXXFLAGS_DEBUG += -O0
 QT += dbus xml
 QT -= gui
 CONFIG += qtsparql

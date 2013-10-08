@@ -15,6 +15,8 @@ equals(QT_MAJOR_VERSION, 4): {
 equals(QT_MAJOR_VERSION, 5): PKGCONFIG += Qt5SystemInfo buteosyncfw5
 
 #QMAKE_CXXFLAGS += -O0 -Werror
+QMAKE_CXXFLAGS_DEBUG -= -O2
+QMAKE_CXXFLAGS_DEBUG += -O0
 
 TEMPLATE = lib
 TARGET = meegomtp
