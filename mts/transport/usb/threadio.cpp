@@ -38,7 +38,7 @@ static const char *const event_names[] = {
 };
 
 IOThread::IOThread(QObject *parent)
-    : QThread(parent), m_handle(0), m_fd(0)
+    : QThread(parent), m_handle(0), m_fd(0), m_shouldExit(false)
 {}
 
 void IOThread::setFd(int fd)
@@ -52,6 +52,22 @@ void IOThread::interrupt()
         MTP_LOG_INFO("Sending interrupt signal");
         pthread_kill(m_handle, SIGUSR1);
     }
+}
+
+// TODO: In Qt 5.2, QThread::requestInterruption() can make this nicer.
+void IOThread::exitThread()
+{
+    // Tell the thread to exit; the run() method should check this variable
+    m_shouldExit = true;
+    // Wake it up if it's blocked on something
+    interrupt();
+    // Wait for the thread to exit, interrupting again every millisecond.
+    // Looping is necessary to avoid some races (such as interrupting
+    // just before the thread starts blocking I/O).
+    while (!wait(1))
+        interrupt();
+    // Clean up for the next run
+    m_shouldExit = false;
 }
 
 bool IOThread::stall(bool dirIn)
@@ -91,22 +107,21 @@ void ControlReaderThread::run()
     int readSize, count;
 
     m_handle = pthread_self();
-    do {
-        while((readSize = read(m_fd, readBuffer, MAX_CONTROL_IN_SIZE)) > 0) {
-            count = readSize/(sizeof(struct usb_functionfs_event));
-            event = (struct usb_functionfs_event*)readBuffer;
-            for(int i = 0; i < count; i++ )
-                handleEvent(event + i);
+    while(!m_shouldExit) {
+        readSize = read(m_fd, readBuffer, MAX_CONTROL_IN_SIZE);
+        if (readSize <= 0) {
+            if (errno != EINTR)
+                perror("ControlReaderThread");
+            continue;
         }
-        perror("ControlReaderThread");
-    } while(errno != EINTR);
-
+        count = readSize/(sizeof(struct usb_functionfs_event));
+        event = (struct usb_functionfs_event*)readBuffer;
+        for(int i = 0; i < count; i++ )
+            handleEvent(event + i);
+    }
 
     m_handle = 0;
-    if(errno != EINTR) {
-        perror("run");
-        MTP_LOG_CRITICAL("ControlReaderThread exited: " << errno);
-    }
+    MTP_LOG_CRITICAL("ControlReaderThread exited");
 }
 
 void ControlReaderThread::sendStatus()
@@ -146,6 +161,12 @@ void ControlReaderThread::handleEvent(struct usb_functionfs_event *event)
         case FUNCTIONFS_DISABLE:
         case FUNCTIONFS_SUSPEND:
             emit stopIO();
+            break;
+        case FUNCTIONFS_BIND:
+            emit bindUSB();
+            break;
+        case FUNCTIONFS_UNBIND:
+            emit unbindUSB();
             break;
         case FUNCTIONFS_SETUP:
             setupRequest((void*)event);
@@ -201,9 +222,9 @@ BulkReaderThread::~BulkReaderThread()
 void BulkReaderThread::run()
 {
     int readSize;
+    bool bufferSent = false;
 
     m_handle = pthread_self();
-    m_threadRunning = true;
 
     char* inbuf = new char[MAX_DATA_IN_SIZE];
     // m_wait controls message flow between bulkreader and main thread.
@@ -212,48 +233,52 @@ void BulkReaderThread::run()
     // When the main thread is done with the buffer, it will wake up
     // this thread again by calling releaseBuffer() which uses m_wait
     // to notify this thread.
-    do {
+    while (!m_shouldExit) {
         readSize = read(m_fd, inbuf, MAX_DATA_IN_SIZE); // Read Header
-        while(readSize != -1) {
-            emit dataRead(inbuf, readSize);
-            if(!m_threadRunning) break;
-            // QWaitCondition requires the lock to be held, but we
-            // don't use the lock for anything else so just lock it here.
-            m_lock.lock();
-            m_wait.wait(&m_lock);
-            m_lock.unlock();
-            if(!m_threadRunning) break;
-            readSize = read(m_fd, inbuf, MAX_DATA_IN_SIZE); // Read Header
+        if (m_shouldExit)
+            break;
+        if (readSize == -1) {
+            if (errno == EINTR)
+                continue;
+            if (errno == EAGAIN || errno == ESHUTDOWN) {
+                MTP_LOG_WARNING("BulkReaderThread delaying: errno " << errno);
+                msleep(1);
+                continue;
+            }
+            MTP_LOG_CRITICAL("BulkReaderThread exiting: errno " << errno);
+            break;
         }
-    } while(errno == ESHUTDOWN && m_threadRunning);
-    //} while(errno == EINTR || errno == ESHUTDOWN);
-    // TODO: Handle the exceptions above properly.
 
-    m_handle = 0;
-
-    // Known errors to exit here:
-    //   EAGAIN 11 Try Again ** Seems to be triggered from DISABLE/ENABLE
-    //   EINTR   4 Interrupt ** Triggered from SIGUSR1
-
-    if(errno != EINTR) {
-        MTP_LOG_CRITICAL("BulkReaderThread exited: " << errno);
+        bufferSent = true;
+        m_lock.lock();
+        emit dataRead(inbuf, readSize);
+        m_wait.wait(&m_lock);
+        m_lock.unlock();
+        bufferSent = false;
     }
+
+    // FIXME: We can't free the buffer if there may still be a
+    // dataRead event on the main thread's queue that references it. 
+    // Avoid a segfault there by leaking the buffer. Not an ideal solution.
+    if (!bufferSent)
+        delete[] inbuf;
+    m_handle = 0;
 }
 
 // Called by the main thread when it's done with the buffer it got
 // from the dataRead signal.
 void BulkReaderThread::releaseBuffer()
 {
+    // The reader thread will take the lock before emitting dataRead,
+    // and will release it inside m_wait, so taking the lock here ensures
+    // that the reader is already waiting and will notice our wakeAll.
+    QMutexLocker locker(&m_lock);
     m_wait.wakeAll();
 }
 
-void BulkReaderThread::exitThread()
+void BulkReaderThread::interrupt() // Executed in main thread
 {
-    // Executed in main thread
-    m_threadRunning = false;
-    // TODO: Not 100% reliable operation
-    usleep(10);
-    interrupt();  // wake up the thread if it's in read()
+    IOThread::interrupt();  // wake up the thread if it's in read()
     m_wait.wakeAll(); // wake up the thread if it's in m_wait.wait()
 }
 
@@ -287,20 +312,34 @@ void BulkWriterThread::run()
 
     m_handle = pthread_self();
 
-    do {
+    while (m_dataLen && !m_shouldExit) {
         bytesWritten = write(m_fd, dataptr, m_dataLen);
         if(bytesWritten == -1)
         {
-            m_result = false;
-            m_result_ready.storeRelease(1);
-            return;
+            if(errno == EINTR)
+                continue;
+            if(errno == EAGAIN)
+            {
+                MTP_LOG_WARNING("BulkWriterThread delaying: errno " << errno);
+                msleep(1);
+                continue;
+            }
+            if(errno == ESHUTDOWN)
+            {
+                // After a shutdown, the host won't expect this data anymore,
+                // so drop it and report failure.
+                MTP_LOG_WARNING("BulkWriterThread exiting (endpoint shutdown)");
+                break;
+            }
+            MTP_LOG_CRITICAL("BulkWriterThread exiting: errno " << errno);
+            break;
         }
         dataptr += bytesWritten;
         m_dataLen -= bytesWritten;
-    } while(m_dataLen);
+    }
 
     m_handle = 0;
-    m_result = true;
+    m_result = m_dataLen == 0;
     m_result_ready.storeRelease(1);
 }
 
@@ -315,13 +354,8 @@ bool BulkWriterThread::getResult()
     return m_result;
 }
 
-void BulkWriterThread::exitThread()
-{
-    interrupt();
-}
-
 InterruptWriterThread::InterruptWriterThread(QObject *parent)
-    : IOThread(parent), m_running(false)
+    : IOThread(parent)
 {
 }
 
@@ -357,15 +391,13 @@ void InterruptWriterThread::run()
 {
     m_handle = pthread_self();
 
-    m_running = true;
-
-    while(m_running) {
+    while(!m_shouldExit) {
         m_lock.lock();
 
-        while(m_running && m_buffers.isEmpty())
+        while(!m_shouldExit && m_buffers.isEmpty())
             m_wait.wait(&m_lock); // will release the lock while waiting
 
-        if (!m_running) { // may have been woken up by exitThread()
+        if (m_shouldExit) { // may have been woken up by exitThread()
             m_lock.unlock();
             break;
         }
@@ -376,22 +408,23 @@ void InterruptWriterThread::run()
         quint8 *dataptr = pair.first;
         int dataLen = pair.second;
 
-        do {
+        while(dataLen && !m_shouldExit) {
             int bytesWritten = write(m_fd, dataptr, dataLen);
             if(bytesWritten == -1)
             {
-                // FIXME: this EINTR handling will discard the event,
-                // possibly halfway through sending it, and leak the buffer.
-                if(errno == EINTR)
+                if (errno == EINTR)
                     continue;
-                else {
-                    m_running = false;
-                    break;
+                if (errno == EAGAIN || errno == ESHUTDOWN) {
+                    MTP_LOG_WARNING("InterruptWriterThread delaying:" << errno);
+                    msleep(1);
+                    continue;
                 }
+                MTP_LOG_CRITICAL("InterruptWriterThread exiting:" << errno);
+                break;
             }
             dataptr += bytesWritten;
             dataLen -= bytesWritten;
-        } while(dataLen);
+        }
 
         free(pair.first);
     }
@@ -410,9 +443,8 @@ void InterruptWriterThread::reset()
     m_buffers.clear();
 }
 
-void InterruptWriterThread::exitThread()
+void InterruptWriterThread::interrupt()
 {
-    m_running = false;
-    interrupt();  // wake up the thread if it's in write()
+    IOThread::interrupt();  // wake up the thread if it's in write()
     m_wait.wakeAll(); // wake up the thread if it's in m_wait.wait()
 }

@@ -29,6 +29,7 @@
 *
 */
 
+#include <signal.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -44,6 +45,24 @@
 #include <QCoreApplication>
 
 using namespace meegomtp1dot0;
+
+static void signalHandler(int signum)
+{
+    return; // This handler just exists to make blocking I/O return with EINTR
+}
+
+static void catchUserSignal()
+{
+    struct sigaction action;
+
+    memset(&action, 0, sizeof(action));
+    action.sa_handler = signalHandler;
+    sigemptyset(&action.sa_mask);
+    action.sa_flags = 0;
+
+    if (sigaction(SIGUSR1, &action, NULL) < 0)
+        MTP_LOG_WARNING("Could not establish SIGUSR1 signal handler");
+}
 
 MTPTransporterUSB::MTPTransporterUSB() : m_ioState(SUSPENDED), m_containerReadLen(0),
     m_ctrlFd(-1), m_intrFd(-1), m_inFd(-1), m_outFd(-1), m_writer_busy(false)
@@ -85,12 +104,16 @@ bool MTPTransporterUSB::activate()
     }
 
     if(success) {
-        openDevices(); // TODO: trigger with Bind?
+        catchUserSignal();
         m_ctrl.setFd(m_ctrlFd);
         QObject::connect(&m_ctrl, SIGNAL(startIO()),
             this, SLOT(startRead()), Qt::QueuedConnection);
         QObject::connect(&m_ctrl, SIGNAL(stopIO()),
             this, SLOT(stopRead()), Qt::QueuedConnection);
+        QObject::connect(&m_ctrl, SIGNAL(bindUSB()),
+            this, SLOT(openDevices()), Qt::QueuedConnection);
+        QObject::connect(&m_ctrl, SIGNAL(unbindUSB()),
+            this, SLOT(closeDevices()), Qt::QueuedConnection);
         QObject::connect(&m_ctrl, SIGNAL(deviceReset()),
             this, SIGNAL(deviceReset()), Qt::QueuedConnection);
         QObject::connect(&m_ctrl, SIGNAL(cancelTransaction()),
@@ -103,10 +126,10 @@ bool MTPTransporterUSB::activate()
 
 bool MTPTransporterUSB::deactivate()
 {
+    MTP_LOG_INFO("MTPTransporterUSB deactivating");
     closeDevices();
 
-    m_ctrl.interrupt();
-    m_ctrl.wait();
+    m_ctrl.exitThread();
     close(m_ctrlFd);
 
     return true;
@@ -139,10 +162,6 @@ void MTPTransporterUSB::reset()
     m_bulkRead.exitThread();
     m_bulkWrite.exitThread();
     m_intrWrite.exitThread();
-
-    m_bulkRead.wait();
-    m_bulkWrite.wait();
-    m_intrWrite.wait();
 
     m_intrWrite.start();
     m_bulkRead.start();
@@ -181,6 +200,7 @@ bool MTPTransporterUSB::sendData(const quint8* data, quint32 dataLen, bool isLas
     }
     bool r = m_bulkWrite.getResult();
 
+    m_bulkWrite.wait();
     m_writer_busy = false;
     return r;
 }
@@ -270,9 +290,7 @@ void MTPTransporterUSB::processReceivedData(quint8* data, quint32 dataLen)
 void MTPTransporterUSB::openDevices()
 {
     m_ioState = ACTIVE;
-
-    if(m_intrWrite.isRunning())
-        m_intrWrite.exitThread();
+    MTP_LOG_INFO("MTP opening endpoint devices");
 
     m_inFd = open(in_file, O_RDWR);
     if(-1 == m_inFd)
@@ -280,16 +298,6 @@ void MTPTransporterUSB::openDevices()
         MTP_LOG_CRITICAL("Couldn't open IN endpoint file " << in_file);
     } else {
         m_bulkWrite.setFd(m_inFd);
-    }
-
-    // TODO: Read state might lock due to the manner of operation,
-    // but we should ensure that it doesn't stick around, it wouldn't
-    // really be nessesary to stop the thread, but make sure it's in the
-    // correct operation state. (The read() will terminate once it's closed)
-
-    if(-1 != m_outFd) {
-        close(m_outFd);
-        //m_bulkRead.wait();
     }
 
     m_outFd = open(out_file, O_RDWR);
@@ -313,24 +321,29 @@ void MTPTransporterUSB::openDevices()
 
 void MTPTransporterUSB::closeDevices()
 {
+    MTP_LOG_INFO("MTP closing endpoint devices");
     m_ioState = SUSPENDED;
 
     m_bulkRead.exitThread();
     m_bulkWrite.exitThread();
     m_intrWrite.exitThread();
 
-    // FIXME: this probably won't exit properly?
-    // -- It doesn't, fixit
+    stopRead();
+    m_intrWrite.reset();
+
     if(m_outFd != -1) {
         close(m_outFd);
+        m_bulkWrite.setFd(-1);
         m_outFd = -1;
     }
     if(m_inFd != -1) {
         close(m_inFd);
+        m_bulkRead.setFd(-1);
         m_inFd = -1;
     }
     if(m_intrFd != -1) {
         close(m_intrFd);
+        m_intrWrite.setFd(-1);
         m_intrFd = -1;
     }
 }
