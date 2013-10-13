@@ -263,6 +263,7 @@ void BulkReaderThread::run()
     if (!bufferSent)
         delete[] inbuf;
     m_handle = 0;
+    MTP_LOG_INFO("BulkReaderThread finished");
 }
 
 // Called by the main thread when it's done with the buffer it got
@@ -341,6 +342,7 @@ void BulkWriterThread::run()
     m_handle = 0;
     m_result = m_dataLen == 0;
     m_result_ready.storeRelease(1);
+    MTP_LOG_INFO("BulkWriterThread finished");
 }
 
 bool BulkWriterThread::resultReady()
@@ -431,6 +433,7 @@ void InterruptWriterThread::run()
     }
 
     m_handle = 0;
+    MTP_LOG_INFO("InterruptWriterThread finished");
 }
 
 void InterruptWriterThread::reset()
