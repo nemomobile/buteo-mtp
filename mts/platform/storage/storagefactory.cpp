@@ -521,8 +521,7 @@ MTPResponseCode StorageFactory::getObjectPropertyValue(const ObjHandle &handle,
         }
         notFoundList.swap(propValList);
     } else {
-        m_objectPropertyCache.get(handle, propValList, notFoundList);
-        if (notFoundList.isEmpty()) {
+        if (m_objectPropertyCache.get(handle, propValList, notFoundList)) {
             return MTP_RESP_OK;
         }
     }
