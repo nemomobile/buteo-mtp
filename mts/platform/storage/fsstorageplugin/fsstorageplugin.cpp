@@ -1626,7 +1626,11 @@ void FSStoragePlugin::populateObjectInfo( StorageItem *storageItem )
 quint16 FSStoragePlugin::getObjectFormatByExtension( StorageItem *storageItem )
 {
     // TODO Fetch from tracker or determine from the file.
-    quint16 format = MTP_OBF_FORMAT_Undefined;
+
+    // We report files with unknown format as Text since some initiators (namely
+    // libgphoto2) refuse to copy files having  MTP_OBF_FORMAT_Undefined out of
+    // the device.
+    quint16 format = MTP_OBF_FORMAT_Text;
 
     QFileInfo item(storageItem->m_path);
     if( item.isDir() )
