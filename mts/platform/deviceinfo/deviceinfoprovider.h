@@ -72,6 +72,8 @@ private:
     /// Gets the BT friendly name of the device.
     QString getBTFriendlyName();
 
+    QString readVersionTag(QString filename, const char *tag);
+
     QString m_defaultAdapterPath; ///< The BT default adapter interface path.
 };
 }
