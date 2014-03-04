@@ -81,28 +81,41 @@ DeviceInfoProvider::~DeviceInfoProvider()
  *********************************************/
 void DeviceInfoProvider::getSystemInfo()
 {
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-    QDeviceInfo *di = new QDeviceInfo(this);
+    QDeviceInfo di;
 
     /// @todo hardcoded to first IMEI for now
-    m_serialNo = di->imei(0).isEmpty() ? m_serialNo : di->imei(0);
-    m_deviceVersion = di->version(QDeviceInfo::Firmware).isEmpty()
-        ? m_deviceVersion : di->version(QDeviceInfo::Firmware);
-#else
-    QSystemInfo *si = new QSystemInfo(this);
-    QSystemDeviceInfo *di = new QSystemDeviceInfo(this);
+    m_serialNo = di.imei(0).isEmpty() ? m_serialNo : di.imei(0);
 
-    m_deviceVersion = si->version(QSystemInfo::Firmware).isEmpty()
-        ? m_deviceVersion : si->version(QSystemInfo::Firmware);
-    m_serialNo = di->imei().isEmpty() ? m_serialNo : di->imei();
+    QString osRelease(readVersionTag("/etc/os-release", "VERSION"));
+    QString hwRelease(readVersionTag("/etc/hw-release", "VERSION_ID"));
+    if (!(osRelease.isEmpty() && hwRelease.isEmpty())) {
+        m_deviceVersion = QString("%1 HW: %2").arg(osRelease).arg(hwRelease);
+    }
 
-    delete si;
-#endif
+    m_manufacturer = di.manufacturer().isEmpty() ? m_manufacturer : di.manufacturer();
+    m_model = di.model().isEmpty() ? m_model : di.model();
+}
 
-    m_manufacturer = di->manufacturer().isEmpty() ? m_manufacturer : di->manufacturer();
-    m_model = di->model().isEmpty() ? m_model : di->model();
+QString DeviceInfoProvider::readVersionTag(QString filename, const char *tag)
+{
+    QFile file(filename);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return QString();
+    }
 
-    delete di;
+    QRegularExpression rexp(QString("^%1=\\s*\"?([^\"]*)\"?\\s*$").arg(tag));
+
+    while (!file.atEnd()) {
+        QString line(file.readLine());
+        if (line.startsWith(tag)) {
+            line.replace(rexp, "\\1");
+            if (!line.isEmpty()) {
+                return line;
+            }
+        }
+    }
+
+    return QString();
 }
 
 /**********************************************
